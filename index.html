@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="it" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Creator Lab — Creator Content Calendar</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        neon: { purple: '#a855f7', violet: '#8b5cf6', gold: '#fbbf24', pink: '#ec4899' }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f0f17 0%, #1a1025 50%, #0f0f17 100%);
+            min-height: 100vh;
+        }
+        
+        .card-area {
+            background: rgba(30, 20, 45, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(168, 85, 247, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .calendar-day {
+            min-height: 90px;
+            transition: all 0.2s;
+        }
+        
+        .calendar-day:hover {
+            background: rgba(168, 85, 247, 0.15);
+        }
+        
+        .calendar-day.today {
+            border: 2px solid #a855f7;
+        }
+        
+        .calendar-day.has-content {
+            background: rgba(168, 85, 247, 0.12);
+        }
+        
+        .platform-youtube { background: #ff0000; }
+        .platform-tiktok { background: #000000; }
+        .platform-instagram { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
+        .platform-shorts { background: #ff0000; }
+        .platform-other { background: #6366f1; }
+        
+        .lang-menu {
+            display: none;
+            position: absolute;
+            top: 110%;
+            right: 0;
+            background: #1e1b2e;
+            border: 1px solid rgba(168, 85, 247, 0.4);
+            border-radius: 12px;
+            overflow: hidden;
+            z-index: 50;
+            min-width: 140px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+        }
+        .lang-menu.show { display: block; }
+        
+        .lang-option {
+            padding: 10px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        .lang-option:hover { background: rgba(168, 85, 247, 0.25); }
+        
+        .status-idea { background: #3b82f6; }
+        .status-planned { background: #eab308; }
+        .status-published { background: #22c55e; }
+    </style>
+</head>
+<body class="text-gray-100 antialiased">
+
+    <div class="max-w-6xl mx-auto px-4 py-8 relative">
+        
+        <!-- LANGUAGE SELECTOR -->
+        <div class="absolute top-4 right-4 sm:top-6 sm:right-6 z-50" id="langSelector">
+            <button onclick="toggleLangMenu(event)" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-900/50 border border-purple-500/40 text-sm hover:bg-purple-800/60 transition">
+                <i class="fas fa-globe"></i>
+                <span id="currentLangLabel">IT</span>
+                <i class="fas fa-chevron-down text-xs"></i>
+            </button>
+            <div id="langMenu" class="lang-menu">
+                <div class="lang-option" onclick="changeLanguage('it')">🇮🇹 Italiano</div>
+                <div class="lang-option" onclick="changeLanguage('en')">🇬🇧 English</div>
+            </div>
+        </div>
+
+        <!-- HEADER -->
+        <header class="text-center mb-10 pt-10 sm:pt-6">
+            <div class="inline-flex items-center gap-2 mb-4 px-4 py-1.5 rounded-full bg-purple-900/40 border border-purple-500/30 text-sm text-purple-300">
+                <i class="fas fa-sparkles text-yellow-400"></i> Digital Creator Lab
+            </div>
+            <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-3 bg-gradient-to-r from-purple-300 via-pink-300 to-amber-200 bg-clip-text text-transparent">
+                Creator Content Calendar
+            </h1>
+            <p id="headerDesc" class="text-gray-400 max-w-2xl mx-auto text-sm sm:text-base"></p>
+        </header>
+
+        <!-- GUIDA UTENTE -->
+        <section class="mb-10">
+            <div class="card-area rounded-2xl p-6">
+                <h2 class="text-xl font-bold mb-5 flex items-center gap-2">
+                    <i class="fas fa-book-open text-yellow-400"></i>
+                    <span id="guideTitle"></span>
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="guideSteps"></div>
+            </div>
+        </section>
+
+        <!-- CONTROLLI CALENDARIO -->
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+            <div class="flex items-center gap-3">
+                <button onclick="changeMonth(-1)" class="w-10 h-10 rounded-xl bg-purple-800/50 hover:bg-purple-700 flex items-center justify-center transition">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <h2 id="currentMonthYear" class="text-xl font-semibold min-w-[180px] text-center"></h2>
+                <button onclick="changeMonth(1)" class="w-10 h-10 rounded-xl bg-purple-800/50 hover:bg-purple-700 flex items-center justify-center transition">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+            
+            <button onclick="openAddModal()" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 font-medium text-sm transition shadow-lg">
+                <i class="fas fa-plus"></i>
+                <span id="btnAddContent"></span>
+            </button>
+        </div>
+
+        <!-- CALENDARIO -->
+        <div class="card-area rounded-2xl p-4 sm:p-6 mb-10">
+            <div class="grid grid-cols-7 gap-1 mb-2 text-center text-xs sm:text-sm font-medium text-purple-300">
+                <div id="day0"></div>
+                <div id="day1"></div>
+                <div id="day2"></div>
+                <div id="day3"></div>
+                <div id="day4"></div>
+                <div id="day5"></div>
+                <div id="day6"></div>
+            </div>
+            <div id="calendarGrid" class="grid grid-cols-7 gap-1"></div>
+        </div>
+
+        <!-- LISTA CONTENUTI -->
+        <section class="mb-12">
+            <h2 class="text-xl font-semibold mb-5 flex items-center gap-2">
+                <i class="fas fa-list-check text-purple-400"></i>
+                <span id="listTitle"></span>
+            </h2>
+            <div id="contentList" class="space-y-3"></div>
+        </section>
+
+        <!-- FOOTER -->
+        <footer class="text-center pt-8 border-t border-purple-900/40">
+            <p class="text-gray-500 text-sm mb-5">
+                Powered by <span class="text-purple-400 font-medium">Digital Creator Lab</span>
+            </p>
+            
+            <div class="flex flex-wrap justify-center gap-4 mb-6">
+                <a href="https://www.youtube.com/@digitalcreatorlabIT" target="_blank"
+                   class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-600/20 hover:bg-red-600/40 border border-red-500/30 transition text-sm font-medium min-w-[130px] justify-center">
+                    <i class="fab fa-youtube"></i> YouTube
+                </a>
+                <a href="https://whatsapp.com/channel/0029Vb8tqXaB4hdRxxjPkp3C" target="_blank"
+                   class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-green-600/20 hover:bg-green-600/40 border border-green-500/30 transition text-sm font-medium min-w-[130px] justify-center">
+                    <i class="fab fa-whatsapp"></i> WhatsApp
+                </a>
+                <a href="https://www.tiktok.com/@digital_creatorlab" target="_blank"
+                   class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-black/40 hover:bg-black/60 border border-gray-500/40 transition text-sm font-medium min-w-[130px] justify-center">
+                    <i class="fab fa-tiktok"></i> TikTok
+                </a>
+            </div>
+            
+            <p class="text-xs text-gray-600" id="footerText"></p>
+        </footer>
+    </div>
+
+    <!-- MODAL -->
+    <div id="contentModal" class="fixed inset-0 bg-black/70 hidden items-center justify-center z-50 p-4">
+        <div class="card-area rounded-2xl p-6 w-full max-w-md">
+            <h3 class="text-xl font-bold mb-5" id="modalTitle"></h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1" id="labelTitle"></label>
+                    <input type="text" id="inputTitle" class="w-full bg-black/40 border border-purple-500/30 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-purple-500">
+                </div>
+                
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1" id="labelDate"></label>
+                    <input type="date" id="inputDate" class="w-full bg-black/40 border border-purple-500/30 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-purple-500">
+                </div>
+                
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1" id="labelPlatform"></label>
+                    <select id="inputPlatform" class="w-full bg-black/40 border border-purple-500/30 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-purple-500"></select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1" id="labelStatus"></label>
+                    <select id="inputStatus" class="w-full bg-black/40 border border-purple-500/30 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-purple-500"></select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1" id="labelNotes"></label>
+                    <textarea id="inputNotes" rows="3" class="w-full bg-black/40 border border-purple-500/30 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-purple-500 resize-none"></textarea>
+                </div>
+            </div>
+            
+            <div class="flex gap-3 mt-6">
+                <button onclick="saveContent()" class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 font-medium text-sm">
+                    <span id="btnSave"></span>
+                </button>
+                <button onclick="closeModal()" class="px-5 py-2.5 rounded-xl bg-gray-700 hover:bg-gray-600 text-sm">
+                    <span id="btnCancel"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const translations = {
+            it: {
+                headerDesc: "Pianifica i tuoi contenuti per YouTube, TikTok e Instagram in modo semplice e visuale.",
+                guideTitle: "Guida Rapida",
+                guideSteps: [
+                    { title: "1. Naviga il mese", desc: "Usa le frecce per cambiare mese." },
+                    { title: "2. Aggiungi contenuto", desc: "Clicca su “Aggiungi Contenuto” oppure su un giorno del calendario." },
+                    { title: "3. Organizza", desc: "Scegli piattaforma, stato e aggiungi eventuali note." },
+                    { title: "4. Monitora", desc: "Visualizza e gestisci tutti i contenuti del mese nella lista sotto." }
+                ],
+                btnAddContent: "Aggiungi Contenuto",
+                listTitle: "Contenuti del Mese",
+                footerText: "Strumento gratuito per la community • Usa e condividi liberamente",
+                modalTitle: "Aggiungi Contenuto",
+                modalTitleEdit: "Modifica Contenuto",
+                labelTitle: "Titolo del contenuto",
+                labelDate: "Data",
+                labelPlatform: "Piattaforma",
+                labelStatus: "Stato",
+                labelNotes: "Note (opzionale)",
+                btnSave: "Salva",
+                btnCancel: "Annulla",
+                days: ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"],
+                months: ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"],
+                noContent: "Nessun contenuto pianificato per questo mese.",
+                status: { idea: "Idea", planned: "Pianificato", published: "Pubblicato" },
+                platforms: { youtube: "YouTube", tiktok: "TikTok", instagram: "Instagram", shorts: "YouTube Shorts", other: "Altro" },
+                alertMissing: "Inserisci almeno titolo e data",
+                confirmDelete: "Vuoi eliminare questo contenuto?"
+            },
+            en: {
+                headerDesc: "Plan your content for YouTube, TikTok and Instagram in a simple and visual way.",
+                guideTitle: "Quick Guide",
+                guideSteps: [
+                    { title: "1. Navigate the month", desc: "Use the arrows to change month." },
+                    { title: "2. Add content", desc: "Click “Add Content” or click on a day in the calendar." },
+                    { title: "3. Organize", desc: "Choose platform, status and add notes if needed." },
+                    { title: "4. Track", desc: "View and manage all monthly content in the list below." }
+                ],
+                btnAddContent: "Add Content",
+                listTitle: "Monthly Content",
+                footerText: "Free tool for the community • Use and share freely",
+                modalTitle: "Add Content",
+                modalTitleEdit: "Edit Content",
+                labelTitle: "Content Title",
+                labelDate: "Date",
+                labelPlatform: "Platform",
+                labelStatus: "Status",
+                labelNotes: "Notes (optional)",
+                btnSave: "Save",
+                btnCancel: "Cancel",
+                days: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+                months: ["January","February","March","April","May","June","July","August","September","October","November","December"],
+                noContent: "No content planned for this month.",
+                status: { idea: "Idea", planned: "Planned", published: "Published" },
+                platforms: { youtube: "YouTube", tiktok: "TikTok", instagram: "Instagram", shorts: "YouTube Shorts", other: "Other" },
+                alertMissing: "Please enter at least title and date",
+                confirmDelete: "Do you want to delete this content?"
+            }
+        };
+
+        let currentLang = localStorage.getItem('contentCalendarLang') || 'it';
+        let currentDate = new Date();
+        let contents = JSON.parse(localStorage.getItem('creatorContents') || '[]');
+        let editingId = null;
+
+        function t(key) {
+            return translations[currentLang][key];
+        }
+
+        function toggleLangMenu(e) {
+            e.stopPropagation();
+            document.getElementById('langMenu').classList.toggle('show');
+        }
+
+        function changeLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('contentCalendarLang', lang);
+            document.getElementById('currentLangLabel').textContent = lang.toUpperCase();
+            document.getElementById('langMenu').classList.remove('show');
+            document.documentElement.lang = lang;
+            applyTranslations();
+            renderCalendar();
+            renderContentList();
+        }
+
+        function applyTranslations() {
+            document.getElementById('headerDesc').textContent = t('headerDesc');
+            document.getElementById('guideTitle').textContent = t('guideTitle');
+            document.getElementById('btnAddContent').textContent = t('btnAddContent');
+            document.getElementById('listTitle').textContent = t('listTitle');
+            document.getElementById('footerText').textContent = t('footerText');
+            document.getElementById('labelTitle').textContent = t('labelTitle');
+            document.getElementById('labelDate').textContent = t('labelDate');
+            document.getElementById('labelPlatform').textContent = t('labelPlatform');
+            document.getElementById('labelStatus').textContent = t('labelStatus');
+            document.getElementById('labelNotes').textContent = t('labelNotes');
+            document.getElementById('btnSave').textContent = t('btnSave');
+            document.getElementById('btnCancel').textContent = t('btnCancel');
+
+            // Days
+            t('days').forEach((day, i) => {
+                document.getElementById(`day${i}`).textContent = day;
+            });
+
+            // Guide
+            document.getElementById('guideSteps').innerHTML = t('guideSteps').map(s => `
+                <div class="bg-purple-900/20 border border-purple-500/20 rounded-xl p-4">
+                    <div class="font-semibold text-sm mb-1">${s.title}</div>
+                    <p class="text-xs text-gray-400">${s.desc}</p>
+                </div>
+            `).join('');
+
+            // Platform select
+            const platformSelect = document.getElementById('inputPlatform');
+            platformSelect.innerHTML = Object.entries(t('platforms')).map(([value, label]) => 
+                `<option value="${value}">${label}</option>`
+            ).join('');
+
+            // Status select
+            const statusSelect = document.getElementById('inputStatus');
+            statusSelect.innerHTML = Object.entries(t('status')).map(([value, label]) => 
+                `<option value="${value}">${label}</option>`
+            ).join('');
+        }
+
+        function changeMonth(delta) {
+            currentDate.setMonth(currentDate.getMonth() + delta);
+            renderCalendar();
+            renderContentList();
+        }
+
+        function renderCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            
+            document.getElementById('currentMonthYear').textContent = `${t('months')[month]} ${year}`;
+
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const startDay = (firstDay.getDay() + 6) % 7;
+            const totalDays = lastDay.getDate();
+
+            const grid = document.getElementById('calendarGrid');
+            grid.innerHTML = '';
+
+            for (let i = 0; i < startDay; i++) {
+                grid.innerHTML += `<div class="calendar-day rounded-lg bg-black/20"></div>`;
+            }
+
+            const today = new Date();
+            
+            for (let day = 1; day <= totalDays; day++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayContents = contents.filter(c => c.date === dateStr);
+                const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day;
+                
+                const dots = dayContents.slice(0, 3).map(c => 
+                    `<div class="w-2 h-2 rounded-full platform-${c.platform}"></div>`
+                ).join('');
+
+                grid.innerHTML += `
+                    <div onclick="openAddModal('${dateStr}')" 
+                         class="calendar-day rounded-lg bg-black/30 p-1.5 cursor-pointer ${isToday ? 'today' : ''} ${dayContents.length ? 'has-content' : ''}">
+                        <div class="text-xs sm:text-sm font-medium mb-1">${day}</div>
+                        <div class="flex flex-wrap gap-1">
+                            ${dots}
+                            ${dayContents.length > 3 ? `<span class="text-[10px] text-purple-300">+${dayContents.length-3}</span>` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function openAddModal(date = null) {
+            editingId = null;
+            document.getElementById('inputTitle').value = '';
+            document.getElementById('inputDate').value = date || new Date().toISOString().split('T')[0];
+            document.getElementById('inputPlatform').value = 'youtube';
+            document.getElementById('inputStatus').value = 'idea';
+            document.getElementById('inputNotes').value = '';
+            document.getElementById('modalTitle').textContent = t('modalTitle');
+            
+            document.getElementById('contentModal').classList.remove('hidden');
+            document.getElementById('contentModal').classList.add('flex');
+        }
+
+        function closeModal() {
+            document.getElementById('contentModal').classList.add('hidden');
+            document.getElementById('contentModal').classList.remove('flex');
+        }
+
+        function saveContent() {
+            const title = document.getElementById('inputTitle').value.trim();
+            const date = document.getElementById('inputDate').value;
+            const platform = document.getElementById('inputPlatform').value;
+            const status = document.getElementById('inputStatus').value;
+            const notes = document.getElementById('inputNotes').value.trim();
+
+            if (!title || !date) {
+                alert(t('alertMissing'));
+                return;
+            }
+
+            if (editingId) {
+                const index = contents.findIndex(c => c.id === editingId);
+                contents[index] = { ...contents[index], title, date, platform, status, notes };
+            } else {
+                contents.push({
+                    id: Date.now(),
+                    title,
+                    date,
+                    platform,
+                    status,
+                    notes
+                });
+            }
+
+            localStorage.setItem('creatorContents', JSON.stringify(contents));
+            closeModal();
+            renderCalendar();
+            renderContentList();
+        }
+
+        function deleteContent(id) {
+            if (confirm(t('confirmDelete'))) {
+                contents = contents.filter(c => c.id !== id);
+                localStorage.setItem('creatorContents', JSON.stringify(contents));
+                renderCalendar();
+                renderContentList();
+            }
+        }
+
+        function editContent(id) {
+            const item = contents.find(c => c.id === id);
+            if (!item) return;
+            
+            editingId = id;
+            document.getElementById('inputTitle').value = item.title;
+            document.getElementById('inputDate').value = item.date;
+            document.getElementById('inputPlatform').value = item.platform;
+            document.getElementById('inputStatus').value = item.status;
+            document.getElementById('inputNotes').value = item.notes || '';
+            document.getElementById('modalTitle').textContent = t('modalTitleEdit');
+            
+            document.getElementById('contentModal').classList.remove('hidden');
+            document.getElementById('contentModal').classList.add('flex');
+        }
+
+        function renderContentList() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            
+            const monthContents = contents
+                .filter(c => {
+                    const d = new Date(c.date);
+                    return d.getFullYear() === year && d.getMonth() === month;
+                })
+                .sort((a, b) => a.date.localeCompare(b.date));
+
+            const container = document.getElementById('contentList');
+            
+            if (monthContents.length === 0) {
+                container.innerHTML = `<p class="text-gray-500 text-sm">${t('noContent')}</p>`;
+                return;
+            }
+
+            container.innerHTML = monthContents.map(item => `
+                <div class="card-area rounded-xl p-4 flex flex-wrap items-start justify-between gap-3">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="w-3 h-3 rounded-full platform-${item.platform}"></span>
+                            <span class="font-medium">${item.title}</span>
+                        </div>
+                        <div class="text-xs text-gray-400 flex flex-wrap gap-2">
+                            <span>${item.date}</span>
+                            <span class="px-2 py-0.5 rounded status-${item.status} text-white">${t('status')[item.status]}</span>
+                            <span>${t('platforms')[item.platform]}</span>
+                        </div>
+                        ${item.notes ? `<p class="text-xs text-gray-500 mt-1">${item.notes}</p>` : ''}
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="editContent(${item.id})" class="w-8 h-8 rounded-lg bg-purple-800/50 hover:bg-purple-700 flex items-center justify-center">
+                            <i class="fas fa-pen text-sm"></i>
+                        </button>
+                        <button onclick="deleteContent(${item.id})" class="w-8 h-8 rounded-lg bg-red-900/40 hover:bg-red-800 flex items-center justify-center">
+                            <i class="fas fa-trash text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Init
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('currentLangLabel').textContent = currentLang.toUpperCase();
+            applyTranslations();
+            renderCalendar();
+            renderContentList();
+        });
+
+        // Close language menu when clicking outside
+        document.addEventListener('click', (e) => {
+            const selector = document.getElementById('langSelector');
+            if (!selector.contains(e.target)) {
+                document.getElementById('langMenu').classList.remove('show');
+            }
+        });
+    </script>
+</body>
+</html>
